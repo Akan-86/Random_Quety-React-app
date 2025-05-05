@@ -1,0 +1,39 @@
+.quote-card {
+  background: #ffffff;
+  border: 2px solid #e60073;
+  border-radius: 16px;
+  padding: 30px;
+  margin: 20px;
+  max-width: 600px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.quote-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.quote-text {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.quote-author {
+  font-size: 1.4rem;
+  color: #555;
+  text-align: right;
+  font-style: italic;
+  margin-bottom: 20px;
+}
+
+.quote-likes {
+  font-size: 1.2rem;
+  color: #666;
+  text-align: center;
+  margin-top: 15px;
+}
