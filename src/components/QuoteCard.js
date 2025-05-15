@@ -1,10 +1,18 @@
-import React from "react";
+import React, { useContext } from "react";
 import "./QuoteCard.css";
-export function QuoteCard({ quote, author, likeCount }) {
+import { QuoteContext } from "../QuoteContext";
+
+export function QuoteCard() {
+  const { quotes, currentIndex } = useContext(QuoteContext);
+  const { quote, author, likeCount } = quotes[currentIndex];
+
   return (
     <div className="quote-card">
-      <p className="quote-text">"{quote}"</p>
+      {}
+      <blockquote className="quote-text">"{quote}"</blockquote>
+      {}
       <p className="quote-author">- {author}</p>
+      {}
       <p className="quote-likes">Likes: {likeCount}</p>
     </div>
   );
