@@ -1,3 +1,4 @@
+// src/QuoteContext.js
 import React, { createContext, useState } from "react";
 import { quotes as initialQuotes } from "./quotes";
 
@@ -17,11 +18,9 @@ export function QuoteProvider({ children }) {
   }
 
   function handleLikeQuoteClick() {
-    setQuotes((prevQuotes) =>
-      prevQuotes.map((quote, index) =>
-        index === currentIndex
-          ? { ...quote, likeCount: quote.likeCount + 1 }
-          : quote
+    setQuotes((prev) =>
+      prev.map((q, i) =>
+        i === currentIndex ? { ...q, likeCount: q.likeCount + 1 } : q
       )
     );
   }
