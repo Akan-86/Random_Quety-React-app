@@ -1,10 +1,11 @@
 export interface Quote {
-  quote: string;
+  id: string;
+  text: string;
   author: string;
   likeCount: number;
 }
 
-export const quotes: Quote[] = [
+const rawQuotes = [
   {
     quote: "Be yourself; everyone else is already taken.",
     author: "Oscar Wilde",
@@ -260,3 +261,10 @@ export const quotes: Quote[] = [
     likeCount: 0,
   },
 ];
+
+export const quotes: Quote[] = rawQuotes.map((q, idx) => ({
+  id: (idx + 1).toString(),
+  text: q.quote,
+  author: q.author,
+  likeCount: q.likeCount,
+}));
