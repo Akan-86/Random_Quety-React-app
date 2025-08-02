@@ -31,6 +31,7 @@ export default function App(): JSX.Element {
                 </Protected>
               }
             />
+
             <Route
               path="/favorites"
               element={
@@ -50,8 +51,9 @@ export default function App(): JSX.Element {
 
 function Navbar() {
   const { user, logout } = useContext(AuthContext);
+
   return (
-    <nav className="bg-white shadow-md p-4 flex space-x-4">
+    <nav className="bg-white shadow-md p-4 flex space-x-4 items-center">
       {user ? (
         <>
           <Link to="/" className="text-blue-600 hover:underline">
