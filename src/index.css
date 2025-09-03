@@ -1,9 +1,0 @@
-/* src/index.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Örnek temel stil */
-body {
-  @apply bg-gray-50 text-gray-800;
-}
