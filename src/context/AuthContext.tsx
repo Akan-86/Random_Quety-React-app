@@ -1,9 +1,9 @@
-import React, {
+import {
   createContext,
   useReducer,
   useEffect,
   ReactNode,
-  Dispatch,
+  useContext,
 } from "react";
 
 export interface User {
@@ -27,7 +27,6 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case "AUTH_REQUEST":
       return { ...state, loading: true, error: null, message: null };
-
     case "AUTH_SUCCESS":
       return {
         ...state,
@@ -35,13 +34,10 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         user: action.payload.user,
         message: action.payload.message ?? null,
       };
-
     case "AUTH_ERROR":
       return { ...state, loading: false, error: action.payload };
-
     case "AUTH_LOGOUT":
       return { user: null, loading: false, error: null, message: null };
-
     default:
       return state;
   }
@@ -96,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem("user", JSON.stringify(json.user));
       dispatch({
         type: "AUTH_SUCCESS",
-        payload: { user: json.user, message: "Hesap başarıyla oluşturuldu!" },
+        payload: { user: json.user, message: "Account successfully created!" },
       });
     } catch (err: any) {
       dispatch({ type: "AUTH_ERROR", payload: err.message });
@@ -144,4 +140,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
 }

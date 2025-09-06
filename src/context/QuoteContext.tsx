@@ -12,6 +12,8 @@ import {
   updateQuote as updateQuoteDb,
   deleteQuote as deleteQuoteDb,
 } from "../services/firestore";
+import { useAuth } from "./AuthContext";
+import { toast } from "react-hot-toast";
 
 interface State {
   quotes: Quote[];
@@ -32,10 +34,8 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SET_QUOTES":
       return { ...state, quotes: action.payload };
-
     case "ADD_QUOTE":
       return { ...state, quotes: [...state.quotes, action.payload] };
-
     case "UPDATE_QUOTE":
       return {
         ...state,
@@ -43,13 +43,11 @@ function reducer(state: State, action: Action): State {
           q.id === action.payload.id ? { ...q, ...action.payload } : q
         ),
       };
-
     case "DELETE_QUOTE":
       return {
         ...state,
         quotes: state.quotes.filter((q) => q.id !== action.payload),
       };
-
     case "NEXT_QUOTE": {
       if (state.quotes.length < 2) return state;
       let idx: number;
@@ -58,7 +56,6 @@ function reducer(state: State, action: Action): State {
       } while (idx === state.currentIndex);
       return { ...state, currentIndex: idx };
     }
-
     case "TOGGLE_FAVORITE": {
       const id = action.payload;
       const favorites = state.favorites.includes(id)
@@ -66,7 +63,6 @@ function reducer(state: State, action: Action): State {
         : [...state.favorites, id];
       return { ...state, favorites };
     }
-
     case "INCREMENT_LIKE": {
       const id = action.payload;
       return {
@@ -76,7 +72,6 @@ function reducer(state: State, action: Action): State {
         ),
       };
     }
-
     default:
       return state;
   }
@@ -84,11 +79,7 @@ function reducer(state: State, action: Action): State {
 
 interface ContextType extends State {
   loadQuotes: () => Promise<void>;
-  addQuote: (data: {
-    text: string;
-    author: string;
-    createdBy: string;
-  }) => Promise<void>;
+  addQuote: (data: { text: string; author: string }) => Promise<void>;
   updateQuote: (
     id: string,
     data: Partial<{ text: string; author: string }>
@@ -102,6 +93,7 @@ interface ContextType extends State {
 const QuoteContext = createContext<ContextType | undefined>(undefined);
 
 export function QuoteProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, {
     quotes: [],
     currentIndex: 0,
@@ -109,30 +101,62 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   });
 
   const loadQuotes = async () => {
-    const docs = await fetchQuotes();
-    dispatch({ type: "SET_QUOTES", payload: docs as Quote[] });
+    try {
+      const docs = await fetchQuotes();
+      dispatch({ type: "SET_QUOTES", payload: docs as Quote[] });
+    } catch {
+      toast.error("Quotes could not be loaded");
+    }
   };
 
-  const addQuote = async (data: {
-    text: string;
-    author: string;
-    createdBy: string;
-  }) => {
-    const created = await createQuoteDb(data);
-    dispatch({ type: "ADD_QUOTE", payload: created });
+  const addQuote = async (data: { text: string; author: string }) => {
+    if (!user) {
+      toast.error("You must log in");
+      return;
+    }
+    try {
+      const created = await createQuoteDb({
+        ...data,
+        createdBy: user.uid,
+      });
+      dispatch({ type: "ADD_QUOTE", payload: created });
+      toast.success("Quote added");
+    } catch {
+      toast.error("Could not add quote");
+    }
   };
 
   const updateQuote = async (
     id: string,
     data: Partial<{ text: string; author: string }>
   ) => {
-    await updateQuoteDb(id, data);
-    dispatch({ type: "UPDATE_QUOTE", payload: { id, ...data } });
+    const quote = state.quotes.find((q) => q.id === id);
+    if (!user || quote?.createdBy !== user.uid) {
+      toast.error("You do not have permission to update this quote.");
+      return;
+    }
+    try {
+      await updateQuoteDb(id, data);
+      dispatch({ type: "UPDATE_QUOTE", payload: { id, ...data } });
+      toast.success("Quote updated");
+    } catch {
+      toast.error("Update failed");
+    }
   };
 
   const deleteQuote = async (id: string) => {
-    await deleteQuoteDb(id);
-    dispatch({ type: "DELETE_QUOTE", payload: id });
+    const quote = state.quotes.find((q) => q.id === id);
+    if (!user || quote?.createdBy !== user.uid) {
+      toast.error("You do not have permission to delete this quote.");
+      return;
+    }
+    try {
+      await deleteQuoteDb(id);
+      dispatch({ type: "DELETE_QUOTE", payload: id });
+      toast.success("Quote deleted");
+    } catch {
+      toast.error("Delete failed");
+    }
   };
 
   const handleNext = () => dispatch({ type: "NEXT_QUOTE" });

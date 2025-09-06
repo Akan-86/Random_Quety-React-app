@@ -8,6 +8,7 @@ import {
   deleteDoc,
   query,
   where,
+  serverTimestamp,
 } from "firebase/firestore";
 import { firebaseApp } from "../firebaseConfig";
 
@@ -22,12 +23,13 @@ export async function fetchQuotes() {
 export async function createQuote(data: {
   text: string;
   author: string;
-  createdBy: string;
+  createdBy: string; 
 }) {
   const docRef = await addDoc(quotesCol, {
     ...data,
     likeCount: 0,
-    createdAt: new Date(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
   return { id: docRef.id, ...data, likeCount: 0 };
 }
@@ -37,7 +39,7 @@ export async function updateQuote(
   data: Partial<{ text: string; author: string }>
 ) {
   const ref = doc(db, "quotes", id);
-  await updateDoc(ref, { ...data, updatedAt: new Date() });
+  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
 }
 
 export async function deleteQuote(id: string) {
@@ -45,9 +47,8 @@ export async function deleteQuote(id: string) {
   await deleteDoc(ref);
 }
 
-
-export async function fetchUserQuotes(userEmail: string) {
-  const q = query(quotesCol, where("createdBy", "==", userEmail));
+export async function fetchUserQuotes(userUid: string) {
+  const q = query(quotesCol, where("createdBy", "==", userUid));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
