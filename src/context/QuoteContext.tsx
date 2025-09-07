@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useReducer,
   useContext,
@@ -11,6 +11,7 @@ import {
   createQuote as createQuoteDb,
   updateQuote as updateQuoteDb,
   deleteQuote as deleteQuoteDb,
+  toggleLikeInDb,
 } from "../services/firestore";
 import { useAuth } from "./AuthContext";
 import { toast } from "react-hot-toast";
@@ -34,8 +35,10 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SET_QUOTES":
       return { ...state, quotes: action.payload };
+
     case "ADD_QUOTE":
       return { ...state, quotes: [...state.quotes, action.payload] };
+
     case "UPDATE_QUOTE":
       return {
         ...state,
@@ -43,11 +46,13 @@ function reducer(state: State, action: Action): State {
           q.id === action.payload.id ? { ...q, ...action.payload } : q
         ),
       };
+
     case "DELETE_QUOTE":
       return {
         ...state,
         quotes: state.quotes.filter((q) => q.id !== action.payload),
       };
+
     case "NEXT_QUOTE": {
       if (state.quotes.length < 2) return state;
       let idx: number;
@@ -56,6 +61,7 @@ function reducer(state: State, action: Action): State {
       } while (idx === state.currentIndex);
       return { ...state, currentIndex: idx };
     }
+
     case "TOGGLE_FAVORITE": {
       const id = action.payload;
       const favorites = state.favorites.includes(id)
@@ -63,15 +69,17 @@ function reducer(state: State, action: Action): State {
         : [...state.favorites, id];
       return { ...state, favorites };
     }
+
     case "INCREMENT_LIKE": {
       const id = action.payload;
       return {
         ...state,
         quotes: state.quotes.map((q) =>
-          q.id === id ? { ...q, likeCount: q.likeCount + 1 } : q
+          q.id === id ? { ...q, likeCount: (q.likeCount || 0) + 1 } : q
         ),
       };
     }
+
     default:
       return state;
   }
@@ -86,6 +94,9 @@ interface ContextType extends State {
   ) => Promise<void>;
   deleteQuote: (id: string) => Promise<void>;
   handleNext: () => void;
+
+  toggleLike: (id: string) => Promise<void>;
+
   toggleFavorite: (id: string) => void;
   likeQuote: (id: string) => void;
 }
@@ -103,7 +114,14 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   const loadQuotes = async () => {
     try {
       const docs = await fetchQuotes();
-      dispatch({ type: "SET_QUOTES", payload: docs as Quote[] });
+
+      const normalized = (docs as Quote[]).map((q: any) => ({
+        likedBy: [],
+        likeCount: 0,
+        ...q,
+        likedBy: Array.isArray(q.likedBy) ? q.likedBy : [],
+      }));
+      dispatch({ type: "SET_QUOTES", payload: normalized as Quote[] });
     } catch {
       toast.error("Quotes could not be loaded");
     }
@@ -111,18 +129,18 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
 
   const addQuote = async (data: { text: string; author: string }) => {
     if (!user) {
-      toast.error("You must log in");
+      toast.error("You must be logged in");
       return;
     }
     try {
       const created = await createQuoteDb({
         ...data,
-        createdBy: user.uid,
+        createdBy: (user as any).uid,
       });
-      dispatch({ type: "ADD_QUOTE", payload: created });
+      dispatch({ type: "ADD_QUOTE", payload: created as Quote });
       toast.success("Quote added");
     } catch {
-      toast.error("Could not add quote");
+      toast.error("Failed to add quote");
     }
   };
 
@@ -131,8 +149,8 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     data: Partial<{ text: string; author: string }>
   ) => {
     const quote = state.quotes.find((q) => q.id === id);
-    if (!user || quote?.createdBy !== user.uid) {
-      toast.error("You do not have permission to update this quote.");
+    if (!user || quote?.createdBy !== (user as any).uid) {
+      toast.error("You don't have permission to update this quote");
       return;
     }
     try {
@@ -140,14 +158,14 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "UPDATE_QUOTE", payload: { id, ...data } });
       toast.success("Quote updated");
     } catch {
-      toast.error("Update failed");
+      toast.error("Failed to update quote");
     }
   };
 
   const deleteQuote = async (id: string) => {
     const quote = state.quotes.find((q) => q.id === id);
-    if (!user || quote?.createdBy !== user.uid) {
-      toast.error("You do not have permission to delete this quote.");
+    if (!user || quote?.createdBy !== (user as any).uid) {
+      toast.error("You don't have permission to delete this quote");
       return;
     }
     try {
@@ -155,18 +173,47 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "DELETE_QUOTE", payload: id });
       toast.success("Quote deleted");
     } catch {
-      toast.error("Delete failed");
+      toast.error("Failed to delete quote");
     }
   };
 
-  const handleNext = () => dispatch({ type: "NEXT_QUOTE" });
-  const toggleFavorite = (id: string) =>
+  const toggleLike = async (id: string) => {
+    if (!user) {
+      toast.error("You must be logged in");
+      return;
+    }
+    const quote = state.quotes.find((q) => q.id === id);
+    if (!quote) return;
+
+    const uid = (user as any).uid;
+    const current = Array.isArray(quote.likedBy) ? quote.likedBy : [];
+    const hasLiked = current.includes(uid);
+
+    try {
+      await toggleLikeInDb(id, uid, hasLiked);
+
+      const nextLikedBy = hasLiked
+        ? current.filter((x) => x !== uid)
+        : [...current, uid];
+
+      dispatch({
+        type: "UPDATE_QUOTE",
+        payload: { id, likedBy: nextLikedBy as any },
+      });
+    } catch {
+      toast.error("Failed to toggle like");
+    }
+  };
+
+  const toggleFavorite = (id: string) => {
     dispatch({ type: "TOGGLE_FAVORITE", payload: id });
-  const likeQuote = (id: string) =>
-    dispatch({ type: "INCREMENT_LIKE", payload: id });
+  };
+  const likeQuote = (id: string) => {
+    void toggleLike(id);
+  };
 
   useEffect(() => {
-    loadQuotes();
+    void loadQuotes();
   }, []);
 
   return (
@@ -177,7 +224,8 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         addQuote,
         updateQuote,
         deleteQuote,
-        handleNext,
+        handleNext: () => dispatch({ type: "NEXT_QUOTE" }),
+        toggleLike,
         toggleFavorite,
         likeQuote,
       }}

@@ -9,9 +9,10 @@ import {
   query,
   where,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
-import { firebaseApp } from "../firebaseConfig";
-
+import { firebaseApp } from "../firebaseConfig"; 
 const db = getFirestore(firebaseApp);
 const quotesCol = collection(db, "quotes");
 
@@ -27,11 +28,11 @@ export async function createQuote(data: {
 }) {
   const docRef = await addDoc(quotesCol, {
     ...data,
-    likeCount: 0,
+    likedBy: [], 
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return { id: docRef.id, ...data, likeCount: 0 };
+  return { id: docRef.id, ...data, likedBy: [], likeCount: 0 };
 }
 
 export async function updateQuote(
@@ -51,4 +52,14 @@ export async function fetchUserQuotes(userUid: string) {
   const q = query(quotesCol, where("createdBy", "==", userUid));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+
+export async function toggleLikeInDb(quoteId: string, userId: string, hasLiked: boolean) {
+  const ref = doc(db, "quotes", quoteId);
+  if (hasLiked) {
+    await updateDoc(ref, { likedBy: arrayRemove(userId), updatedAt: serverTimestamp() });
+  } else {
+    await updateDoc(ref, { likedBy: arrayUnion(userId), updatedAt: serverTimestamp() });
+  }
 }
