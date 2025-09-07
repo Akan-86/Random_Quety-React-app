@@ -1,6 +1,4 @@
-import React from "react";
 import { useQuote } from "../context/QuoteContext";
-import { Quote } from "../quotes";
 
 export default function FavoritesPage(): JSX.Element {
   const { quotes, favorites, toggleFavorite } = useQuote();

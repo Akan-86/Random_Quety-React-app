@@ -1,4 +1,3 @@
-import React from "react";
 import { useQuote } from "../context/QuoteContext";
 import { QuoteCard } from "./QuoteCard";
 
