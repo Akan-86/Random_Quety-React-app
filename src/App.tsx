@@ -12,6 +12,27 @@ import QuotePage from "./components/QuotePage";
 import FavoritesPage from "./components/FavoritesPage";
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
+import NewQuotePage from "./pages/NewQuotePage";
+import EditQuotePage from "./pages/EditQuotePage";
+
+<Routes>
+  <Route
+    path="/quotes/new"
+    element={
+      <Protected>
+        <NewQuotePage />
+      </Protected>
+    }
+  />
+  <Route
+    path="/quotes/:id/edit"
+    element={
+      <Protected>
+        <EditQuotePage />
+      </Protected>
+    }
+  />
+</Routes>;
 
 export default function App(): JSX.Element {
   return (

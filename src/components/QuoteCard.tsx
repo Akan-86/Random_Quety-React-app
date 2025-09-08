@@ -1,5 +1,7 @@
-import React from "react";
 import { Quote } from "../quotes";
+import { useAuth } from "../context/AuthContext";
+import { useQuote } from "../context/QuoteContext";
+import { toast } from "react-hot-toast";
 
 interface Props {
   quote: Quote;
@@ -16,6 +18,23 @@ export function QuoteCard({
   onLike,
   isFavorite,
 }: Props) {
+  const { user } = useAuth();
+  const { deleteQuote } = useQuote();
+
+  const handleDelete = async () => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this quote?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteQuote(quote.id);
+      toast.success("Quote deleted");
+    } catch {
+      toast.error("Failed to delete quote");
+    }
+  };
+
   return (
     <div className="max-w-xl bg-white rounded-lg shadow-lg p-6 text-center">
       <p className="text-2xl font-semibold italic">“{quote.text}”</p>
@@ -25,7 +44,7 @@ export function QuoteCard({
         <button
           onClick={() => onLike(quote.id)}
           type="button"
-          aria-label={`Beğen, mevcut beğeni sayısı ${quote.likeCount}`}
+          aria-label={`Like, current like count ${quote.likeCount}`}
           className="px-3 py-1 bg-yellow-400 text-white rounded"
         >
           👍 {quote.likeCount}
@@ -35,13 +54,24 @@ export function QuoteCard({
           onClick={() => onToggleFav(quote.id)}
           type="button"
           aria-pressed={isFavorite}
-          aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
           className={`px-3 py-1 rounded ${
             isFavorite ? "bg-red-500 text-white" : "bg-green-500 text-white"
           }`}
         >
           {isFavorite ? "Unfavorite" : "Favorite"}
         </button>
+
+        {}
+        {user?.uid === quote.createdBy && (
+          <button
+            onClick={handleDelete}
+            type="button"
+            className="px-3 py-1 bg-red-600 text-white rounded"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       <div className="mt-4">
