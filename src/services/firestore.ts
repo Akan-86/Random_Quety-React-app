@@ -1,65 +1,62 @@
 import {
   getFirestore,
   collection,
-  doc,
   getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
-  query,
-  where,
-  serverTimestamp,
-  arrayUnion,
-  arrayRemove,
+  doc,
+  getDoc,
 } from "firebase/firestore";
-import { firebaseApp } from "../firebaseConfig"; 
+import { firebaseApp } from "../firebaseConfig";
+import { Quote } from "../quotes";
+
 const db = getFirestore(firebaseApp);
-const quotesCol = collection(db, "quotes");
 
-export async function fetchQuotes() {
-  const snap = await getDocs(quotesCol);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+export async function fetchQuotes(): Promise<Quote[]> {
+  const snapshot = await getDocs(collection(db, "quotes"));
+  return snapshot.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...docSnap.data(),
+  })) as Quote[];
 }
 
-export async function createQuote(data: {
-  text: string;
-  author: string;
-  createdBy: string; 
-}) {
-  const docRef = await addDoc(quotesCol, {
-    ...data,
-    likedBy: [], 
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  return { id: docRef.id, ...data, likedBy: [], likeCount: 0 };
+export async function createQuote(data: Omit<Quote, "id">) {
+  const docRef = await addDoc(collection(db, "quotes"), data);
+  return { id: docRef.id, ...data };
 }
 
-export async function updateQuote(
-  id: string,
-  data: Partial<{ text: string; author: string }>
-) {
-  const ref = doc(db, "quotes", id);
-  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+export async function updateQuote(id: string, data: Partial<Quote>) {
+  const docRef = doc(db, "quotes", id);
+  await updateDoc(docRef, data);
 }
 
 export async function deleteQuote(id: string) {
-  const ref = doc(db, "quotes", id);
-  await deleteDoc(ref);
+  const docRef = doc(db, "quotes", id);
+  await deleteDoc(docRef);
 }
 
-export async function fetchUserQuotes(userUid: string) {
-  const q = query(quotesCol, where("createdBy", "==", userUid));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-}
+export async function toggleLikeInDb(quoteId: string, userId: string) {
+  const docRef = doc(db, "quotes", quoteId);
+  const snap = await getDoc(docRef);
 
+  if (!snap.exists()) return;
 
-export async function toggleLikeInDb(quoteId: string, userId: string, hasLiked: boolean) {
-  const ref = doc(db, "quotes", quoteId);
-  if (hasLiked) {
-    await updateDoc(ref, { likedBy: arrayRemove(userId), updatedAt: serverTimestamp() });
+  const data = snap.data() as Quote;
+  const likedBy = data.likedBy || [];
+  let newLikedBy: string[];
+  let newLikeCount = data.likeCount || 0;
+
+  if (likedBy.includes(userId)) {
+    newLikedBy = likedBy.filter((id) => id !== userId);
+    newLikeCount = Math.max(0, newLikeCount - 1);
   } else {
-    await updateDoc(ref, { likedBy: arrayUnion(userId), updatedAt: serverTimestamp() });
+    newLikedBy = [...likedBy, userId];
+    newLikeCount = newLikeCount + 1;
   }
+
+  await updateDoc(docRef, {
+    likedBy: newLikedBy,
+    likeCount: newLikeCount,
+  });
 }
