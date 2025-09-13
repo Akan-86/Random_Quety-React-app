@@ -21,9 +21,16 @@ export default function EditQuotePage() {
     }
   }, [quote]);
 
+  // Redirect to login if not authenticated
   if (!user) return <Navigate to="/login" replace />;
+
+  // Show message if quote not found
   if (!quote) return <p>Quote not found</p>;
-  if (quote.createdBy !== (user as any).uid) return <Navigate to="/" replace />;
+
+  // Redirect to home if the current user is not the owner
+  if (quote.createdBy && quote.createdBy !== user.uid) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -11,6 +11,7 @@ export default function NewQuotePage() {
   const [text, setText] = useState("");
   const [author, setAuthor] = useState("");
 
+  // Redirect to login if not authenticated
   if (!user) return <Navigate to="/login" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,6 +31,7 @@ export default function NewQuotePage() {
             onChange={(e) => setText(e.target.value)}
             required
             className="border p-2 w-full"
+            placeholder="Enter the quote text"
           />
         </div>
         <div>
@@ -39,6 +41,7 @@ export default function NewQuotePage() {
             onChange={(e) => setAuthor(e.target.value)}
             required
             className="border p-2 w-full"
+            placeholder="Enter the author's name"
           />
         </div>
         <button

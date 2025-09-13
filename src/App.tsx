@@ -1,4 +1,5 @@
 import React, { useContext } from "react";
+import { JSX } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -14,25 +15,6 @@ import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
 import NewQuotePage from "./pages/NewQuotePage";
 import EditQuotePage from "./pages/EditQuotePage";
-
-<Routes>
-  <Route
-    path="/quotes/new"
-    element={
-      <Protected>
-        <NewQuotePage />
-      </Protected>
-    }
-  />
-  <Route
-    path="/quotes/:id/edit"
-    element={
-      <Protected>
-        <EditQuotePage />
-      </Protected>
-    }
-  />
-</Routes>;
 
 export default function App(): JSX.Element {
   return (
@@ -62,6 +44,24 @@ export default function App(): JSX.Element {
               }
             />
 
+            <Route
+              path="/quotes/new"
+              element={
+                <Protected>
+                  <NewQuotePage />
+                </Protected>
+              }
+            />
+
+            <Route
+              path="/quotes/:id/edit"
+              element={
+                <Protected>
+                  <EditQuotePage />
+                </Protected>
+              }
+            />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
@@ -82,6 +82,9 @@ function Navbar() {
           </Link>
           <Link to="/favorites" className="text-blue-600 hover:underline">
             Favorites
+          </Link>
+          <Link to="/quotes/new" className="text-blue-600 hover:underline">
+            Add Quote
           </Link>
           <button
             onClick={logout}
