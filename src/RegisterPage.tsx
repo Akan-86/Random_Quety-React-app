@@ -2,7 +2,7 @@ import React, { useState, useContext } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext";
 
-const emailRegex = /^\S+@\S+\.\S+$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterPage(): JSX.Element {
   const { user, loading, error, register } = useContext(AuthContext);
@@ -19,11 +19,7 @@ export default function RegisterPage(): JSX.Element {
   if (user) return <Navigate to="/" replace />;
 
   const validate = () => {
-    const errs: {
-      email?: string;
-      password?: string;
-      confirmPassword?: string;
-    } = {};
+    const errs: typeof fieldErrors = {};
     const emailTrimmed = email.trim();
 
     if (!emailTrimmed) {
@@ -51,9 +47,7 @@ export default function RegisterPage(): JSX.Element {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-
-    const emailTrimmed = email.trim();
-    await register({ email: emailTrimmed, password });
+    await register({ email: email.trim(), password });
   };
 
   const isValidLive =
@@ -73,6 +67,7 @@ export default function RegisterPage(): JSX.Element {
         <fieldset disabled={loading}>
           <legend className="text-2xl font-bold mb-4">Sign Up</legend>
 
+          {/* Email */}
           <label htmlFor="reg-email">Email</label>
           <input
             id="reg-email"
@@ -95,6 +90,7 @@ export default function RegisterPage(): JSX.Element {
             </p>
           )}
 
+          {/* Password */}
           <label htmlFor="reg-password">Password (min. 6 characters)</label>
           <input
             id="reg-password"
@@ -125,6 +121,7 @@ export default function RegisterPage(): JSX.Element {
             </p>
           )}
 
+          {/* Confirm Password */}
           <label htmlFor="reg-password-confirm">Confirm password</label>
           <input
             id="reg-password-confirm"
@@ -149,12 +146,14 @@ export default function RegisterPage(): JSX.Element {
             </p>
           )}
 
+          {/* General Error */}
           {error && (
             <div role="alert" className="text-red-600 mb-2">
               {error}
             </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={!isValidLive || loading}

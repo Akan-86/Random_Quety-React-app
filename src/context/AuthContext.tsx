@@ -5,9 +5,18 @@ import {
   ReactNode,
   useContext,
 } from "react";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from "firebase/auth";
+import { auth } from "../firebaseConfig";
 
 export interface User {
-  email: string;
+  uid: string;
+  email: string | null;
 }
 
 interface AuthState {
@@ -19,7 +28,7 @@ interface AuthState {
 
 type AuthAction =
   | { type: "AUTH_REQUEST" }
-  | { type: "AUTH_SUCCESS"; payload: { user: User; message?: string } }
+  | { type: "AUTH_SUCCESS"; payload: { user: User | null; message?: string } }
   | { type: "AUTH_ERROR"; payload: string }
   | { type: "AUTH_LOGOUT" };
 
@@ -46,12 +55,12 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 interface AuthContextProps extends AuthState {
   register: (data: { email: string; password: string }) => Promise<void>;
   login: (data: { email: string; password: string }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const initialState: AuthState = {
   user: null,
-  loading: false,
+  loading: true, // başlangıçta true
   error: null,
   message: null,
 };
@@ -60,68 +69,103 @@ export const AuthContext = createContext<AuthContextProps>({
   ...initialState,
   register: async () => {},
   login: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+function getFriendlyErrorMessage(code: string) {
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "This email is already registered.";
+    case "auth/invalid-email":
+      return "Please enter a valid email address.";
+    case "auth/weak-password":
+      return "Password must be at least 6 characters.";
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+      return "Invalid email or password.";
+    default:
+      return "An unexpected error occurred. Please try again.";
+  }
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      const user: User = JSON.parse(stored);
-      dispatch({ type: "AUTH_SUCCESS", payload: { user } });
-    }
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (firebaseUser: FirebaseUser | null) => {
+        if (firebaseUser) {
+          dispatch({
+            type: "AUTH_SUCCESS",
+            payload: {
+              user: { uid: firebaseUser.uid, email: firebaseUser.email },
+            },
+          });
+        } else {
+          dispatch({ type: "AUTH_LOGOUT" });
+        }
+      }
+    );
+    return () => unsubscribe();
   }, []);
 
-  async function register(data: { email: string; password: string }) {
+  async function register({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }) {
     dispatch({ type: "AUTH_REQUEST" });
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Registration failed");
-
-      localStorage.setItem("user", JSON.stringify(json.user));
+      await createUserWithEmailAndPassword(auth, email, password);
       dispatch({
         type: "AUTH_SUCCESS",
-        payload: { user: json.user, message: "Account successfully created!" },
+        payload: {
+          user: { uid: auth.currentUser!.uid, email: auth.currentUser!.email },
+          message: "Account created!",
+        },
       });
     } catch (err: any) {
-      dispatch({ type: "AUTH_ERROR", payload: err.message });
+      dispatch({
+        type: "AUTH_ERROR",
+        payload: getFriendlyErrorMessage(err.code || ""),
+      });
     }
   }
 
-  async function login(data: { email: string; password: string }) {
+  async function login({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }) {
     dispatch({ type: "AUTH_REQUEST" });
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Login failed");
-
-      localStorage.setItem("user", JSON.stringify(json.user));
+      await signInWithEmailAndPassword(auth, email, password);
       dispatch({
         type: "AUTH_SUCCESS",
-        payload: { user: json.user, message: "Login successful!" },
+        payload: {
+          user: { uid: auth.currentUser!.uid, email: auth.currentUser!.email },
+          message: "Login successful!",
+        },
       });
     } catch (err: any) {
-      dispatch({ type: "AUTH_ERROR", payload: err.message });
+      dispatch({
+        type: "AUTH_ERROR",
+        payload: getFriendlyErrorMessage(err.code || ""),
+      });
     }
   }
 
-  function logout() {
-    localStorage.removeItem("user");
+  async function logout() {
+    await signOut(auth);
     dispatch({ type: "AUTH_LOGOUT" });
   }
 

@@ -108,6 +108,11 @@ function Navbar() {
 }
 
 function Protected({ children }: { children: JSX.Element }) {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading...</div>;
+  }
+
   return user ? children : <Navigate to="/login" replace />;
 }

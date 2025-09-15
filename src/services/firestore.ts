@@ -7,6 +7,8 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { firebaseApp } from "../firebaseConfig";
 import { Quote } from "../quotes";
@@ -36,27 +38,32 @@ export async function deleteQuote(id: string) {
   await deleteDoc(docRef);
 }
 
-export async function toggleLikeInDb(quoteId: string, userId: string) {
+export async function toggleLikeInDb(
+  quoteId: string,
+  userId: string,
+  hasLiked: boolean
+): Promise<string[]> {
   const docRef = doc(db, "quotes", quoteId);
-  const snap = await getDoc(docRef);
 
-  if (!snap.exists()) return;
-
-  const data = snap.data() as Quote;
-  const likedBy = data.likedBy || [];
-  let newLikedBy: string[];
-  let newLikeCount = data.likeCount || 0;
-
-  if (likedBy.includes(userId)) {
-    newLikedBy = likedBy.filter((id) => id !== userId);
-    newLikeCount = Math.max(0, newLikeCount - 1);
+  if (hasLiked) {
+    await updateDoc(docRef, {
+      likedBy: arrayRemove(userId),
+    });
   } else {
-    newLikedBy = [...likedBy, userId];
-    newLikeCount = newLikeCount + 1;
+    await updateDoc(docRef, {
+      likedBy: arrayUnion(userId),
+    });
   }
 
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return [];
+
+  const updatedData = snap.data() as Quote;
+  const updatedLikedBy = updatedData.likedBy || [];
+
   await updateDoc(docRef, {
-    likedBy: newLikedBy,
-    likeCount: newLikeCount,
+    likeCount: updatedLikedBy.length,
   });
+
+  return updatedLikedBy;
 }
