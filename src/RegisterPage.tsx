@@ -1,20 +1,22 @@
 import React, { useState, useContext } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterPage(): JSX.Element {
   const { user, loading, error, register } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
+  const [localError, setLocalError] = useState<string | null>(null);
 
   if (user) return <Navigate to="/" replace />;
 
@@ -46,8 +48,21 @@ export default function RegisterPage(): JSX.Element {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null);
+
     if (!validate()) return;
-    await register({ email: email.trim(), password });
+
+    try {
+      await register({ email: email.trim(), password });
+
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      navigate("/");
+    } catch (err: any) {
+      console.error("Registration failed:", err);
+      setLocalError(err.message || "Registration failed. Please try again.");
+    }
   };
 
   const isValidLive =
@@ -72,6 +87,7 @@ export default function RegisterPage(): JSX.Element {
           <input
             id="reg-email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -95,6 +111,7 @@ export default function RegisterPage(): JSX.Element {
           <input
             id="reg-password"
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
@@ -126,6 +143,7 @@ export default function RegisterPage(): JSX.Element {
           <input
             id="reg-password-confirm"
             type="password"
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => {
               setConfirmPassword(e.target.value);
@@ -147,9 +165,13 @@ export default function RegisterPage(): JSX.Element {
           )}
 
           {/* General Error */}
-          {error && (
-            <div role="alert" className="text-red-600 mb-2">
-              {error}
+          {(error || localError) && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="text-red-600 mb-2"
+            >
+              {error || localError}
             </div>
           )}
 

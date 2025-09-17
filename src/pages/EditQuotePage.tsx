@@ -21,20 +21,23 @@ export default function EditQuotePage() {
     }
   }, [quote]);
 
-  // Redirect to login if not authenticated
+  // 1. Giriş yapmamış kullanıcıyı login sayfasına yönlendir
   if (!user) return <Navigate to="/login" replace />;
 
-  // Show message if quote not found
-  if (!quote) return <p>Quote not found</p>;
+  // 2. Alıntı bulunamadıysa mesaj göster
+  if (!quote) {
+    return <div className="p-4 text-center text-red-600">Quote not found</div>;
+  }
 
-  // Redirect to home if the current user is not the owner
-  if (quote.createdBy && quote.createdBy !== user.uid) {
+  // 3. Kullanıcı sahibi değilse ana sayfaya yönlendir
+  if (quote.createdBy !== user.uid) {
     return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateQuote(id!, { text, author });
+    if (!id) return; // Güvenli kontrol
+    await updateQuote(id, { text, author });
     navigate("/");
   };
 
@@ -62,7 +65,7 @@ export default function EditQuotePage() {
         </div>
         <button
           type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded"
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
         >
           Update Quote
         </button>

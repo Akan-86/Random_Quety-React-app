@@ -5,7 +5,6 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { Quote } from "../quotes";
 import {
   fetchQuotes,
   createQuote as createQuoteDb,
@@ -16,9 +15,20 @@ import {
 import { useAuth } from "./AuthContext";
 import { toast } from "react-hot-toast";
 
+export interface Quote {
+  id: string;
+  text: string;
+  author: string;
+  createdAt?: number;
+  createdBy: string;
+  likedBy: string[];
+  likeCount?: number;
+}
+
 interface State {
   quotes: Quote[];
   currentIndex: number;
+  favorites: Quote[];
 }
 
 type Action =

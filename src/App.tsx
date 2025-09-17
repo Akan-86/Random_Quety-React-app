@@ -1,10 +1,9 @@
 import React, { useContext } from "react";
-import { JSX } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Link,
+  NavLink,
   Navigate,
 } from "react-router-dom";
 import { QuoteProvider } from "./context/QuoteContext";
@@ -16,7 +15,7 @@ import RegisterPage from "./RegisterPage";
 import NewQuotePage from "./pages/NewQuotePage";
 import EditQuotePage from "./pages/EditQuotePage";
 
-export default function App(): JSX.Element {
+export default function App() {
   return (
     <AuthProvider>
       <QuoteProvider>
@@ -73,19 +72,24 @@ export default function App(): JSX.Element {
 function Navbar() {
   const { user, logout } = useContext(AuthContext);
 
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `hover:underline ${
+      isActive ? "text-blue-800 font-semibold" : "text-blue-600"
+    }`;
+
   return (
     <nav className="bg-white shadow-md p-4 flex space-x-4 items-center">
       {user ? (
         <>
-          <Link to="/" className="text-blue-600 hover:underline">
+          <NavLink to="/" className={linkClass}>
             Home
-          </Link>
-          <Link to="/favorites" className="text-blue-600 hover:underline">
+          </NavLink>
+          <NavLink to="/favorites" className={linkClass}>
             Favorites
-          </Link>
-          <Link to="/quotes/new" className="text-blue-600 hover:underline">
+          </NavLink>
+          <NavLink to="/quotes/new" className={linkClass}>
             Add Quote
-          </Link>
+          </NavLink>
           <button
             onClick={logout}
             className="ml-auto text-red-600 hover:underline"
@@ -95,24 +99,28 @@ function Navbar() {
         </>
       ) : (
         <>
-          <Link to="/login" className="text-blue-600 hover:underline">
+          <NavLink to="/login" className={linkClass}>
             Login
-          </Link>
-          <Link to="/register" className="text-blue-600 hover:underline">
+          </NavLink>
+          <NavLink to="/register" className={linkClass}>
             Register
-          </Link>
+          </NavLink>
         </>
       )}
     </nav>
   );
 }
 
-function Protected({ children }: { children: JSX.Element }) {
+function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useContext(AuthContext);
 
   if (loading) {
-    return <div className="p-4 text-center">Loading...</div>;
+    return (
+      <div className="p-4 text-center text-gray-600 animate-pulse">
+        Loading...
+      </div>
+    );
   }
 
-  return user ? children : <Navigate to="/login" replace />;
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
