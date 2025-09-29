@@ -23,14 +23,22 @@ export async function fetchQuotes(): Promise<Quote[]> {
   })) as Quote[];
 }
 
-export async function createQuote(data: Omit<Quote, "id">) {
-  const docRef = await addDoc(collection(db, "quotes"), data);
-  return { id: docRef.id, ...data };
+// 👇 createQuote artık userId parametresi de alıyor
+export async function createQuote(
+  data: Omit<Quote, "id" | "createdBy">,
+  userId: string
+) {
+  const docRef = await addDoc(collection(db, "quotes"), {
+    ...data,
+    createdBy: userId, // 🔑 rules için gerekli alan
+    createdAt: Date.now(),
+  });
+  return { id: docRef.id, ...data, createdBy: userId };
 }
 
 export async function updateQuote(id: string, data: Partial<Quote>) {
   const docRef = doc(db, "quotes", id);
-  await updateDoc(docRef, data);
+  await updateDoc(docRef, { ...data, updatedAt: Date.now() });
 }
 
 export async function deleteQuote(id: string) {
