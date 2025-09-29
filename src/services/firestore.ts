@@ -23,14 +23,13 @@ export async function fetchQuotes(): Promise<Quote[]> {
   })) as Quote[];
 }
 
-// 👇 createQuote artık userId parametresi de alıyor
 export async function createQuote(
   data: Omit<Quote, "id" | "createdBy">,
   userId: string
 ) {
   const docRef = await addDoc(collection(db, "quotes"), {
     ...data,
-    createdBy: userId, // 🔑 rules için gerekli alan
+    createdBy: userId, // Add createdBy field
     createdAt: Date.now(),
   });
   return { id: docRef.id, ...data, createdBy: userId };
