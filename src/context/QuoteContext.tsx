@@ -105,21 +105,23 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // ✅ Revize edilmiş addQuote
   const addQuote = async (data: { text: string; author: string }) => {
     if (!user) {
       toast.error("You must be logged in");
       return;
     }
     try {
-      const created = await createQuoteDb({
-        ...data,
-        createdBy: user.uid,
-        likedBy: [],
-        likeCount: 0,
-      });
+      // createQuoteDb artık iki parametre alıyor: data ve user.uid
+      const created = await createQuoteDb(
+        { text: data.text, author: data.author },
+        user.uid
+      );
+
       dispatch({ type: "ADD_QUOTE", payload: created as Quote });
       toast.success("Quote added");
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to add quote");
     }
   };

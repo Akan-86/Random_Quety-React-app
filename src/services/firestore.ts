@@ -1,50 +1,87 @@
 import {
-  getFirestore,
   collection,
-  getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  query,
+  orderBy,
   arrayUnion,
   arrayRemove,
+  serverTimestamp,
+  Timestamp,
 } from "firebase/firestore";
-import { firebaseApp } from "../firebaseConfig";
-import { Quote } from "../quotes";
+import { db } from "../firebaseConfig";
 
-const db = getFirestore(firebaseApp);
+export interface Quote {
+  id: string;
+  text: string;
+  author: string;
+  createdAt?: number;
+  createdBy: string;
+  likedBy: string[];
+  likeCount?: number;
+}
 
 export async function fetchQuotes(): Promise<Quote[]> {
-  const snapshot = await getDocs(collection(db, "quotes"));
-  return snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...docSnap.data(),
-  })) as Quote[];
-}
+  const q = query(collection(db, "quotes"), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
 
-export async function createQuote(
-  data: Omit<Quote, "id" | "createdBy">,
-  userId: string
-) {
-  const docRef = await addDoc(collection(db, "quotes"), {
-    ...data,
-    createdBy: userId, // Add createdBy field
-    createdAt: Date.now(),
+  return snapshot.docs.map((docSnap) => {
+    const data = docSnap.data() as any;
+    return {
+      id: docSnap.id,
+      text: data.text ?? "",
+      author: data.author ?? "",
+      createdBy: data.createdBy ?? "",
+      createdAt:
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toMillis()
+          : undefined,
+      likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
+      likeCount: data.likeCount ?? 0,
+    };
   });
-  return { id: docRef.id, ...data, createdBy: userId };
 }
 
+// ✅ Add New Quote
+export async function createQuote(
+  data: { text: string; author: string },
+  userId: string
+): Promise<Quote> {
+  const payload = {
+    text: data.text,
+    author: data.author,
+    createdBy: userId,
+    createdAt: serverTimestamp(),
+    likedBy: [],
+    likeCount: 0,
+  };
+
+  const docRef = await addDoc(collection(db, "quotes"), payload);
+
+  return {
+    id: docRef.id,
+    ...payload,
+    createdAt: Date.now(), // UI için fallback
+  } as Quote;
+}
+
+// ✅ Update
 export async function updateQuote(id: string, data: Partial<Quote>) {
   const docRef = doc(db, "quotes", id);
-  await updateDoc(docRef, { ...data, updatedAt: Date.now() });
+  await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() });
 }
 
+// ✅ Delete
 export async function deleteQuote(id: string) {
   const docRef = doc(db, "quotes", id);
   await deleteDoc(docRef);
 }
 
+// ✅ Like toggle
 export async function toggleLikeInDb(
   quoteId: string,
   userId: string,
@@ -53,24 +90,18 @@ export async function toggleLikeInDb(
   const docRef = doc(db, "quotes", quoteId);
 
   if (hasLiked) {
-    await updateDoc(docRef, {
-      likedBy: arrayRemove(userId),
-    });
+    await updateDoc(docRef, { likedBy: arrayRemove(userId) });
   } else {
-    await updateDoc(docRef, {
-      likedBy: arrayUnion(userId),
-    });
+    await updateDoc(docRef, { likedBy: arrayUnion(userId) });
   }
 
   const snap = await getDoc(docRef);
   if (!snap.exists()) return [];
 
-  const updatedData = snap.data() as Quote;
-  const updatedLikedBy = updatedData.likedBy || [];
+  const data = snap.data() as any;
+  const likedBy: string[] = Array.isArray(data.likedBy) ? data.likedBy : [];
 
-  await updateDoc(docRef, {
-    likeCount: updatedLikedBy.length,
-  });
+  await updateDoc(docRef, { likeCount: likedBy.length });
 
-  return updatedLikedBy;
+  return likedBy;
 }

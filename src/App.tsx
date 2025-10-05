@@ -14,7 +14,7 @@ import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
 import NewQuotePage from "./pages/NewQuotePage";
 import EditQuotePage from "./pages/EditQuotePage";
-
+import { seedQuotes } from "./seed/seedQuotes";
 export default function App() {
   return (
     <AuthProvider>
@@ -90,6 +90,12 @@ function Navbar() {
           <NavLink to="/quotes/new" className={linkClass}>
             Add Quote
           </NavLink>
+          <button
+            onClick={seedQuotes}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Seed Quotes
+          </button>
           <button
             onClick={logout}
             className="ml-auto text-red-600 hover:underline"
