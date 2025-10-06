@@ -14,9 +14,9 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const isOwner = user && quote.createdBy === user.uid;
-  const isFavorite = favorites.includes(quote.id);
-  const hasLiked = user && quote.likedBy?.includes(user.uid);
+  const isOwner = user?.uid === quote.createdBy;
+  const isFavorite = favorites.some((f) => f.id === quote.id);
+  const hasLiked = !!user && quote.likedBy?.includes(user.uid);
 
   const handleDelete = async () => {
     await deleteQuote(quote.id);
@@ -25,10 +25,13 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
 
   return (
     <div className="border rounded p-4 shadow-sm bg-white">
-      <p className="text-lg italic mb-2">"{quote.text}"</p>
+      <p className="text-lg italic mb-2">
+        “{quote.text || "No text available"}”
+      </p>
       <p className="text-sm text-gray-600 mb-4">— {quote.author}</p>
 
       <div className="flex items-center space-x-4">
+        {/* Like Button */}
         <button
           onClick={() => toggleLike(quote.id)}
           className={`px-3 py-1 rounded ${
@@ -38,6 +41,7 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
           👍 {quote.likeCount ?? 0}
         </button>
 
+        {/* Favorite Button */}
         <button
           onClick={() => toggleFavorite(quote.id)}
           className={`px-3 py-1 rounded ${
@@ -47,6 +51,7 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
           ★
         </button>
 
+        {/* Edit & Delete Buttons (Owner only) */}
         {isOwner && (
           <>
             <Link
@@ -65,7 +70,7 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
         )}
       </div>
 
-      {}
+      {/* Delete Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded shadow-md max-w-sm w-full">

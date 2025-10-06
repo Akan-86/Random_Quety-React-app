@@ -25,6 +25,7 @@ export interface Quote {
   likeCount?: number;
 }
 
+// ✅ Fetch Quotes
 export async function fetchQuotes(): Promise<Quote[]> {
   const q = query(collection(db, "quotes"), orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
@@ -33,15 +34,23 @@ export async function fetchQuotes(): Promise<Quote[]> {
     const data = docSnap.data() as any;
     return {
       id: docSnap.id,
-      text: data.text ?? "",
+
+      text: data.text ?? data.quote ?? "",
       author: data.author ?? "",
       createdBy: data.createdBy ?? "",
       createdAt:
         data.createdAt instanceof Timestamp
           ? data.createdAt.toMillis()
+          : typeof data.createdAt === "number"
+          ? data.createdAt
           : undefined,
       likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
-      likeCount: data.likeCount ?? 0,
+      likeCount:
+        typeof data.likeCount === "number"
+          ? data.likeCount
+          : Array.isArray(data.likedBy)
+          ? data.likedBy.length
+          : 0,
     };
   });
 }

@@ -17,7 +17,7 @@ import { toast } from "react-hot-toast";
 
 export interface Quote {
   id: string;
-  text: string;
+  text: string; // UI’de hep text kullanılacak
   author: string;
   createdAt?: number;
   createdBy: string;
@@ -36,7 +36,8 @@ type Action =
   | { type: "ADD_QUOTE"; payload: Quote }
   | { type: "UPDATE_QUOTE"; payload: Partial<Quote> & { id: string } }
   | { type: "DELETE_QUOTE"; payload: string }
-  | { type: "NEXT_QUOTE" };
+  | { type: "NEXT_QUOTE" }
+  | { type: "TOGGLE_FAVORITE"; payload: Quote };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -64,6 +65,17 @@ function reducer(state: State, action: Action): State {
       } while (idx === state.currentIndex);
       return { ...state, currentIndex: idx };
     }
+    case "TOGGLE_FAVORITE": {
+      const isFavorite = state.favorites.some(
+        (f) => f.id === action.payload.id
+      );
+      return {
+        ...state,
+        favorites: isFavorite
+          ? state.favorites.filter((f) => f.id !== action.payload.id)
+          : [...state.favorites, action.payload],
+      };
+    }
     default:
       return state;
   }
@@ -79,6 +91,7 @@ interface ContextType extends State {
   deleteQuote: (id: string) => Promise<void>;
   handleNext: () => void;
   toggleLike: (id: string) => Promise<void>;
+  toggleFavorite: (id: string) => void;
 }
 
 const QuoteContext = createContext<ContextType | undefined>(undefined);
@@ -94,8 +107,10 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   const loadQuotes = async () => {
     try {
       const docs = await fetchQuotes();
+
       const normalized: Quote[] = (docs as Quote[]).map((q) => ({
         ...q,
+        text: q.text ?? (q as any).quote ?? "", // 🔑 fallback
         likedBy: Array.isArray(q.likedBy) ? q.likedBy : [],
         likeCount: q.likedBy ? q.likedBy.length : 0,
       }));
@@ -105,19 +120,16 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // ✅ Revize edilmiş addQuote
   const addQuote = async (data: { text: string; author: string }) => {
     if (!user) {
       toast.error("You must be logged in");
       return;
     }
     try {
-      // createQuoteDb artık iki parametre alıyor: data ve user.uid
       const created = await createQuoteDb(
         { text: data.text, author: data.author },
         user.uid
       );
-
       dispatch({ type: "ADD_QUOTE", payload: created as Quote });
       toast.success("Quote added");
     } catch (err) {
@@ -186,6 +198,12 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const toggleFavorite = (id: string) => {
+    const quote = state.quotes.find((q) => q.id === id);
+    if (!quote) return;
+    dispatch({ type: "TOGGLE_FAVORITE", payload: quote });
+  };
+
   useEffect(() => {
     void loadQuotes();
   }, []);
@@ -200,6 +218,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         deleteQuote,
         handleNext: () => dispatch({ type: "NEXT_QUOTE" }),
         toggleLike,
+        toggleFavorite,
       }}
     >
       {children}
